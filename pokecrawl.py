@@ -114,7 +114,7 @@ def main():
     # execute the RPC call
     response_dict = api.call()
 
-    with open('result.json', "w") as f:
+    with open('web/result.json', "w") as f:
         f.write(json.dumps(
             {
                 "Latitude": position[0],

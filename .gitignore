@@ -90,3 +90,4 @@ ENV/
 
 # project configuration
 conf.json
+web/result.json
