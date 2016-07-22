@@ -1,0 +1,1 @@
+-e git+https://github.com/tejado/pgoapi@1f25e907f3e5f1b603330e71041e1ad7bee7580f#egg=pgoapi
