@@ -7,6 +7,11 @@ window.onload = function() {
     method: 'GET',
     url: 'result.json'
   }, displayPokemons, () => { console.error("Could not fetch data") })
+
+  ajax({
+    method: 'GET',
+    url: 'points.json'
+  }, (data) => data.forEach(p => addMarker(map,p)))
 }
 
 function displayMap(lat, lon) {
@@ -18,11 +23,10 @@ function displayMap(lat, lon) {
 function displayPokemons(data) {
   console.log(data)
   map.setView([data.Latitude, data.Longitude], 13)
-  data.Pokemons.forEach(p => addMarker(map, p))
+  data.Pokemons.forEach(p => addPokemonMarker(map, p))
 }
 
-function addMarker(map, markerInfo) {
-  console.log(markerInfo)
+function addPokemonMarker(map, markerInfo) {
   var marker = L.marker([markerInfo.Latitude, markerInfo.Longitude]).addTo(map)
   var expiration = markerInfo.Expiration ? new Date(markerInfo.Expiration) : undefined
   marker.bindPopup(
@@ -31,6 +35,10 @@ function addMarker(map, markerInfo) {
   ).openPopup()
 }
 
+
+function addMarker(map, markerInfo) {
+  var marker = L.marker([markerInfo.Latitude, markerInfo.Longitude]).addTo(map)
+}
 
 function ajax(endpoint, success, error) {
   var xhr = new XMLHttpRequest();
