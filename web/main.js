@@ -37,6 +37,7 @@ function addPokemonMarker(map, markerInfo) {
 
 
 function addMarker(map, markerInfo) {
+  console.log(markerInfo);
   var marker = L.marker([markerInfo.Latitude, markerInfo.Longitude]).addTo(map)
 }
 
@@ -48,7 +49,7 @@ function ajax(endpoint, success, error) {
       var response = null;
       try {
         response = JSON.parse(xhr.responseText);
-      } catch (ignored) { }
+      } catch (error) { console.error(error) }
       if (response !== null) success(response);
       else error !== undefined && error();
     } else error !== undefined && error();

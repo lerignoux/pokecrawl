@@ -6,12 +6,14 @@ import json
 import logging
 import argparse
 import getpass
+import re
 
 # import Pokemon Go API lib
 from pgoapi import pgoapi
 from pgoapi import utilities as util
 
 from pokecli import get_cell_ids, get_pos_by_name
+from s2sphere import Cell, CellId
 
 
 # add directory of this file to PATH, so that the package will be found
@@ -19,6 +21,13 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 
 log = logging.getLogger(__name__)
+
+
+def get_nearby_positions(lat, lon):
+    m_per_deg_lat = 111132.954 - 559.822 * cos( 2 * latMid ) + 1.175 * cos( 4 * latMid);
+    m_per_deg_lon = 111132.954 * cos ( latMid );
+    return []
+
 
 
 def get_pokemons_from_call(response):
@@ -101,33 +110,53 @@ def main():
     if not api.login(config.auth_service, config.username, config.password):
         return
 
-    # provide player position on the earth
-    api.set_position(*position)
 
-    cell_ids = get_cell_ids(position[0], position[1])
-    print(cell_ids)
-    timestamps = [0, ] * len(cell_ids)
-    api.get_map_objects(
-        latitude=util.f2i(position[0]),
-        longitude=util.f2i(position[1]),
-        since_timestamp_ms=timestamps, cell_id=cell_ids
-    )
+    all_cell_ids = get_cell_ids(position[0], position[1], radius=100)
 
-    api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
+    batch = 10
+    batch_count = int(len(all_cell_ids) / batch)
+    pokemon = []
 
-    # execute the RPC call
-    response_dict = api.call()
+    try:
+        #we batch the querys
+        for i in range(batch_count - 1):
+            cell_ids = all_cell_ids[i * batch_count:(i * batch_count) + batch]
+            center_cell = CellId(cell_ids[int(batch / 2)])
 
-    with open('web/result.json', "w") as f:
-        f.write(json.dumps(
-            {
-                "Latitude": position[0],
-                "Longitude": position[1],
-                "Pokemons": get_pokemons_from_call(response_dict)
-            },
-            sort_keys=True,
-            indent=2
-        ))
+            gpsre = "LatLng: (?P<lat>\d+.\d+),(?P<lon>\d+.\d+)"
+            center_gps = re.search(gpsre, str(center_cell.to_lat_lng()))
+
+            lat = float(center_gps.group('lat'))
+            lon = float(center_gps.group('lon'))
+
+            # provide player position on the earth
+            api.set_position(lat, lon, 0.0)
+            timestamps = [0, ] * len(cell_ids)
+            api.get_map_objects(
+                latitude=util.f2i(lat),
+                longitude=util.f2i(lon),
+                since_timestamp_ms=timestamps,
+                cell_id=cell_ids
+            )
+
+            api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
+
+            # execute the RPC call
+            response_dict = api.call()
+
+            pokemon.extend(get_pokemons_from_call(response_dict))
+
+    finally:
+        with open('web/result.json', "w") as f:
+            f.write(json.dumps(
+                {
+                    "Latitude": position[0],
+                    "Longitude": position[1],
+                    "Pokemons": pokemon
+                },
+                sort_keys=True,
+                indent=2
+            ))
 
 
 if __name__ == '__main__':
