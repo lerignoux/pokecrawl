@@ -105,9 +105,13 @@ def main():
     api.set_position(*position)
 
     cell_ids = get_cell_ids(position[0], position[1])
+    print(cell_ids)
     timestamps = [0, ] * len(cell_ids)
-    api.get_map_objects(latitude=util.f2i(position[0]), longitude=util.f2i(position[1]),
-                        since_timestamp_ms=timestamps, cell_id=cell_ids)
+    api.get_map_objects(
+        latitude=util.f2i(position[0]),
+        longitude=util.f2i(position[1]),
+        since_timestamp_ms=timestamps, cell_id=cell_ids
+    )
 
     api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
 
