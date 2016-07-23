@@ -23,11 +23,9 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 log = logging.getLogger(__name__)
 
 
-def get_nearby_positions(lat, lon):
-    m_per_deg_lat = 111132.954 - 559.822 * cos( 2 * latMid ) + 1.175 * cos( 4 * latMid);
-    m_per_deg_lon = 111132.954 * cos ( latMid );
-    return []
-
+def remove_duplicates(pokemons):
+    filtered = {pokemon['EncounterId']: pokemon for pokemon in pokemons}
+    return [pokemon for pokemon in filtered.values()]
 
 
 def get_pokemons_from_call(response):
@@ -110,53 +108,46 @@ def main():
     if not api.login(config.auth_service, config.username, config.password):
         return
 
+    api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
+    pokemons = []
 
-    all_cell_ids = get_cell_ids(position[0], position[1], radius=100)
+    steps = 8
+    positions = [position]
 
-    batch = 10
-    batch_count = int(len(all_cell_ids) / batch)
-    pokemon = []
+    for i in range(steps):
+        for j in range(steps):
+            positions.append((position[0]+(j*0.002), position[1]+(i*0.002), position[2]))
+            positions.append((position[0]-(j*0.002), position[1]-(i*0.002), position[2]))
+            positions.append((position[0]+(j*0.002), position[1]-(i*0.002), position[2]))
+            positions.append((position[0]-(j*0.002), position[1]+(i*0.002), position[2]))
 
-    try:
-        #we batch the querys
-        for i in range(batch_count - 1):
-            cell_ids = all_cell_ids[i * batch_count:(i * batch_count) + batch]
-            center_cell = CellId(cell_ids[int(batch / 2)])
+    for position in positions:
+        cell_ids = get_cell_ids(position[0], position[1])
 
-            gpsre = "LatLng: (?P<lat>\d+.\d+),(?P<lon>\d+.\d+)"
-            center_gps = re.search(gpsre, str(center_cell.to_lat_lng()))
+        # provide player position on the earth
+        api.set_position(position[0], position[1], position[2])
+        timestamps = [0, ] * len(cell_ids)
 
-            lat = float(center_gps.group('lat'))
-            lon = float(center_gps.group('lon'))
+        api.get_map_objects(
+            latitude=util.f2i(position[0]),
+            longitude=util.f2i(position[1]),
+            since_timestamp_ms=timestamps,
+            cell_id=cell_ids
+        )
+        # execute the RPC call
+        response_dict = api.call()
+        pokemons.extend(get_pokemons_from_call(response_dict))
 
-            # provide player position on the earth
-            api.set_position(lat, lon, 0.0)
-            timestamps = [0, ] * len(cell_ids)
-            api.get_map_objects(
-                latitude=util.f2i(lat),
-                longitude=util.f2i(lon),
-                since_timestamp_ms=timestamps,
-                cell_id=cell_ids
-            )
-
-            api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
-
-            # execute the RPC call
-            response_dict = api.call()
-
-            pokemon.extend(get_pokemons_from_call(response_dict))
-
-    finally:
-        with open('web/result.json', "w") as f:
-            f.write(json.dumps(
-                {
-                    "Latitude": position[0],
-                    "Longitude": position[1],
-                    "Pokemons": pokemon
-                },
-                sort_keys=True,
-                indent=2
-            ))
+    with open('web/result.json', "w") as f:
+        f.write(json.dumps(
+            {
+                "Latitude": position[0],
+                "Longitude": position[1],
+                "Pokemons": remove_duplicates(pokemons)
+            },
+            sort_keys=True,
+            indent=2
+        ))
 
 
 if __name__ == '__main__':
