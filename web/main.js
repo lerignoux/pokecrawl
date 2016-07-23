@@ -30,7 +30,7 @@ function addPokemonMarker(map, markerInfo) {
   var marker = L.marker([markerInfo.Latitude, markerInfo.Longitude]).addTo(map)
   var expiration = markerInfo.Expiration ? new Date(markerInfo.Expiration) : undefined
   marker.bindPopup(
-    "<b>" + markerInfo.Name +  "</b> # " + markerInfo.Number + "<br>" +
+    "<img style='width:40px;' src='https://img.pokemondb.net/artwork/" + markerInfo.Name.toLowerCase() + ".jpg'/><b>" + markerInfo.Name +  "</b> # " + markerInfo.Number + "<br>" +
     (expiration ? "Expiration: " + expiration.toLocaleTimeString() : "")
   ).openPopup()
 }
